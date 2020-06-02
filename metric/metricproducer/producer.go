@@ -16,6 +16,7 @@ package metricproducer
 
 import (
 	"go.opencensus.io/metric/metricdata"
+	"go.opencensus.io/resource"
 )
 
 // Producer is a source of metrics.
@@ -25,4 +26,13 @@ type Producer interface {
 	// The returned metrics should be unique for each combination of name and
 	// resource.
 	Read() []*metricdata.Metric
+}
+
+type ResourceProducer interface {
+	Producer
+
+	// Resource optionally reports a Resource other than the default which
+	// the Producer's metrics apply to. A single Producer may only export
+	// metrics for a single Resource.
+	Resource() *resource.Resource
 }

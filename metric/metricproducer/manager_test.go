@@ -17,11 +17,14 @@ package metricproducer
 import (
 	"testing"
 
+	"go.opencensus.io/resource"
+
 	"go.opencensus.io/metric/metricdata"
 )
 
 type testProducer struct {
 	name string
+	r    *resource.Resource
 }
 
 var (
@@ -32,11 +35,15 @@ var (
 )
 
 func newTestProducer(name string) *testProducer {
-	return &testProducer{name}
+	return &testProducer{name, &resource.Resource{Type: name, Labels: map[string]string{"key": name}}}
 }
 
 func (mp *testProducer) Read() []*metricdata.Metric {
 	return nil
+}
+
+func (mp *testProducer) Resource() *resource.Resource {
+	return mp.r
 }
 
 func TestAdd(t *testing.T) {
@@ -108,6 +115,26 @@ func TestGetAllNil(t *testing.T) {
 	want := []*testProducer{}
 	checkSlice(got, want, t)
 	deleteAll()
+}
+
+func TestResourceProducer(t *testing.T) {
+	pm.AddProducer(myProd1)
+	pm.AddProducer(myProd2)
+
+	for _, p := range pm.GetAll() {
+		rp, ok := p.(ResourceProducer)
+		if !ok {
+			t.Errorf("unable to convert %s (%T) to ResourceProducer", p, p)
+			continue
+		}
+		if rp.Resource() == nil {
+			t.Errorf("expected non-nil Resource for %v", rp)
+			continue
+		}
+		if rp.Resource().Type != rp.Resource().Labels["key"] {
+			t.Errorf("Resource type does not match label: %+v", rp.Resource())
+		}
+	}
 }
 
 func TestImmutableProducerList(t *testing.T) {
