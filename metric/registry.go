@@ -19,6 +19,8 @@ import (
 	"sync"
 	"time"
 
+	"go.opencensus.io/resource"
+
 	"go.opencensus.io/metric/metricdata"
 )
 
@@ -27,6 +29,7 @@ import (
 // registry from multiple goroutines.
 type Registry struct {
 	baseMetrics sync.Map
+	resource    *resource.Resource
 }
 
 type metricOptions struct {
@@ -81,6 +84,13 @@ func WithConstLabel(constLabels map[metricdata.LabelKey]metricdata.LabelValue) O
 // NewRegistry initializes a new Registry.
 func NewRegistry() *Registry {
 	return &Registry{}
+}
+
+// SetResource may be used to set the Resource associated with this registry.
+// This is intended to be used in cases where a single process exports metrics
+// for multiple Resources, typically in a multi-tenant situation.
+func (r *Registry) SetResource(resource *resource.Resource) {
+	r.resource = resource
 }
 
 // AddFloat64Gauge creates and adds a new float64-valued gauge to this registry.
@@ -281,4 +291,9 @@ func (r *Registry) Read() []*metricdata.Metric {
 		return true
 	})
 	return ms
+}
+
+// Resource returns a specific
+func (r *Registry) Resource() *resource.Resource {
+	return r.resource
 }

@@ -17,6 +17,8 @@ package metricproducer
 import (
 	"testing"
 
+	"go.opencensus.io/resource"
+
 	"go.opencensus.io/metric/metricdata"
 )
 
@@ -36,6 +38,10 @@ func newTestProducer(name string) *testProducer {
 }
 
 func (mp *testProducer) Read() []*metricdata.Metric {
+	return nil
+}
+
+func (mp *testProducer) Resource() *resource.Resource {
 	return nil
 }
 

@@ -20,6 +20,8 @@ import (
 	"sync"
 	"time"
 
+	"go.opencensus.io/resource"
+
 	"go.opencensus.io/metric/metricdata"
 	"go.opencensus.io/metric/metricproducer"
 	"go.opencensus.io/stats"
@@ -43,6 +45,7 @@ type worker struct {
 	views      map[string]*viewInternal
 	startTimes map[*viewInternal]time.Time
 
+	resource   *resource.Resource
 	timer      *time.Ticker
 	c          chan command
 	quit, done chan bool
@@ -91,6 +94,11 @@ type Meter interface {
 	RegisterExporter(Exporter)
 	// UnregisterExporter unregisters an exporter.
 	UnregisterExporter(Exporter)
+
+	// SetResource may be used to set the Resource associated with this registry.
+	// This is intended to be used in cases where a single process exports metrics
+	// for multiple Resources, typically in a multi-tenant situation.
+	SetResource(*resource.Resource)
 
 	// Start causes the Meter to start processing Record calls and aggregating
 	// statistics as well as exporting data.
@@ -249,6 +257,10 @@ func NewMeter() Meter {
 	}
 }
 
+func (w *worker) SetResource(rsrc *resource.Resource) {
+	w.resource = rsrc
+}
+
 func (w *worker) Start() {
 	go w.start()
 }
@@ -387,6 +399,15 @@ func (w *worker) Read() []*metricdata.Metric {
 	return metrics
 }
 
+// Resource implements the metricproducer.Producer interface, and ollows a
+// non-default Meter to indicate that its exposed metrics are related to a
+// particular Resource other than the process-wide default.
+func (w *worker) Resource() *resource.Resource {
+	return w.resource
+}
+
+// RegisterExporter implements the Meter interface to allow registering an
+// Exporter which will be called every reporting period.
 func (w *worker) RegisterExporter(e Exporter) {
 	w.exportersMu.Lock()
 	defer w.exportersMu.Unlock()
@@ -394,6 +415,8 @@ func (w *worker) RegisterExporter(e Exporter) {
 	w.exporters[e] = struct{}{}
 }
 
+// UnregisterExporter implements the Meter interface to remove an Exporter from
+// being called each reporting period.
 func (w *worker) UnregisterExporter(e Exporter) {
 	w.exportersMu.Lock()
 	defer w.exportersMu.Unlock()

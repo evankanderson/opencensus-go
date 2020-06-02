@@ -5,6 +5,8 @@ import (
 	"runtime"
 	"sync"
 
+	"go.opencensus.io/resource"
+
 	"go.opencensus.io/metric"
 	"go.opencensus.io/metric/metricdata"
 	"go.opencensus.io/metric/metricproducer"
@@ -120,6 +122,13 @@ func (p *producer) Read() []*metricdata.Metric {
 	}
 
 	return p.reg.Read()
+}
+
+// Resource is needed to implement the Producer interface; since runtime
+// metrics are process-global, there's no need to report a custom Resource
+// here.
+func (p *producer) Resource() *resource.Resource {
+	return nil
 }
 
 func newMemStats(producer *producer) (*memStats, error) {
